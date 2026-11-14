@@ -1,0 +1,26 @@
+GALAXY DIVERS - BACKEND STARTUP (WINDOWS)
+
+IMPORTANT: Run commands from the project ROOT folder, not from the backend folder.
+Correct folder: D:\appNASA\galaxy-divers
+Incorrect folder: D:\appNASA\galaxy-divers\backend
+
+EASIEST METHOD
+1. Open File Explorer and open D:\appNASA\galaxy-divers
+2. Double-click start-backend.bat
+3. Keep the backend window open.
+4. In VS Code, open a second terminal in the project root and run:
+   npm run dev
+
+MANUAL METHOD (PowerShell, from project root)
+   cd D:\appNASA\galaxy-divers
+   py -3.13 -m venv .venv
+   .venv\Scripts\python.exe -m pip install --upgrade pip
+   .venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+   .venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+
+Check API: http://127.0.0.1:8000/api/health
+API docs:  http://127.0.0.1:8000/docs
+Frontend:  http://localhost:5173
+
+If py -3.13 reports that no Python installation was found, install Python 3.13 (64-bit) and enable the Python Launcher, then repeat.
+Do not run `uvicorn backend.main:app` while the terminal's current directory is the backend folder.

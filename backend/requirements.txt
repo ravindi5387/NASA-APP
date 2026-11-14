@@ -1,0 +1,10 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+astroquery>=0.4.10,<1
+astropy>=6.1,<8
+numpy>=2.0
+scipy>=1.13
+reproject>=0.14
+python-multipart>=0.0.20
+Pillow>=10
+reportlab>=4
