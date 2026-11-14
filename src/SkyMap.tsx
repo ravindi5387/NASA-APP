@@ -7,77 +7,22 @@ type Atlas = {
   remove?: () => void
 }
 
-type AladinApi = {
-  init: Promise<void>
-  aladin: (selector: string, options: {
-    survey: string
-    fov: number
-    cooFrame: string
-    showCooGridControl: boolean
-    showSimbadPointerControl?: boolean
-    showCooGrid?: boolean
-  }) => Atlas
-}
-
-declare global {
-  interface Window { A?: AladinApi }
-}
+type AladinApi = typeof import('aladin-lite').default
 
 let loading: Promise<AladinApi> | null = null
 
-const ALADIN_SOURCES = [
-  // Pinned npm distribution is a CDN mirror of the official CDS Aladin Lite.
-  'https://cdn.jsdelivr.net/npm/aladin-lite@3.8.2/dist/aladin.min.js',
-  'https://aladin.cds.unistra.fr/AladinLite/api/v3/3.8.2/aladin.js',
-]
-
-function ensureAladinStyles() {
-  if (document.querySelector('link[data-aladin-css="true"]')) return
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = 'https://cdn.jsdelivr.net/npm/aladin-lite@3.8.2/dist/aladin.min.css'
-  link.dataset.aladinCss = 'true'
-  document.head.appendChild(link)
-}
-
 function loadAladin(): Promise<AladinApi> {
-  if (window.A) return Promise.resolve(window.A)
   if (!loading) {
-    loading = (async () => {
-      ensureAladinStyles()
-      const errors: string[] = []
-      for (const src of ALADIN_SOURCES) {
-        try {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement('script')
-            const timer = window.setTimeout(() => {
-              script.remove()
-              reject(new Error(`Timed out loading ${src}`))
-            }, 20000)
-            script.src = src
-            script.async = true
-            script.crossOrigin = 'anonymous'
-            script.onload = () => { window.clearTimeout(timer); resolve() }
-            script.onerror = () => {
-              window.clearTimeout(timer)
-              script.remove()
-              reject(new Error(`Could not load ${src}`))
-            }
-            document.head.appendChild(script)
-          })
-          const api = window.A
-          if (!api) throw new Error('Aladin Lite script loaded but did not expose window.A')
-          await api.init
-          return api
-        } catch (error) {
-          errors.push(error instanceof Error ? error.message : String(error))
-        }
-      }
-      throw new Error(`Could not load Aladin Lite from either the jsDelivr mirror or official CDS host. ${errors.join(' | ')}`)
-    })().catch(error => {
-      loading = null
-      throw error
-    })
+    // The npm distribution exports the API as an ES module.
+    loading = import('aladin-lite')
+      .then(async ({ default: api }: { default: AladinApi }) => {
+        await api.init
+        return api
+      })
+      .catch(error => {
+        loading = null
+        throw error
+      })
   }
   return loading
 }
@@ -98,7 +43,6 @@ export function SkyMap({ coords, onSearch }: {
     setErrorMessage('')
     loadAladin().then(api => {
       if (!active || !container.current) return
-      // Aladin Lite v3 examples use the container selector and global A API.
       const id = 'galaxy-divers-aladin-map'
       container.current.id = id
       atlas.current = api.aladin(`#${id}`, {
@@ -109,7 +53,6 @@ export function SkyMap({ coords, onSearch }: {
         showSimbadPointerControl: true,
         showCooGrid: true,
       })
-      atlas.current.gotoRaDec(coords.ra, coords.dec)
       setStatus('ready')
     }).catch(error => {
       if (active) {
@@ -122,8 +65,6 @@ export function SkyMap({ coords, onSearch }: {
       atlas.current?.remove?.()
       atlas.current = null
     }
-    // Recreate only when the user explicitly retries; coordinates are handled below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt])
 
   const { ra, dec } = coords
@@ -135,11 +76,11 @@ export function SkyMap({ coords, onSearch }: {
     <div className="viewer-head"><h2 id="sky-map-title">Aladin Lite sky map</h2></div>
     <p>Interactive DSS2 colour sky survey from CDS. Pan and zoom, then search the live SPHEREx archive around the map centre. This optical survey is a reference layer, not SPHEREx infrared data.</p>
     <div ref={container} className="aladin-map" hidden={status === 'error'} aria-label="Interactive sky map" />
-    {status === 'loading' && <p role="status">Loading Aladin Lite from the official CDS service…</p>}
+    {status === 'loading' && <p role="status">Loading Aladin Lite…</p>}
     {status === 'error' && <div className="archive-error" role="alert">
       <strong>Sky map could not be loaded</strong>
       <span>{errorMessage}</span>
-      <small>Check internet access to aladin.cds.unistra.fr, then retry. The rest of the website can still be used.</small>
+      <small>Check your internet connection and make sure your browser supports WebGL 2, then retry.</small>
       <button onClick={() => {
         container.current?.replaceChildren()
         setStatus('loading')
