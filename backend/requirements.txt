@@ -8,3 +8,4 @@ reproject>=0.14
 python-multipart>=0.0.20
 Pillow>=10
 reportlab>=4
+httpx>=0.27.0,<1.0
